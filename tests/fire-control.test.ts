@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyImpact, calculateSolution, correctionRadius, resetCorrections, type Target } from '../src/fire-control';
+import { applyImpact, calculateSolution, resetCorrections, type Target } from '../src/fire-control';
 import { exportDocument, importDocument } from '../src/persistence';
 import { sampleChunk } from '../src/terrain';
 
@@ -16,11 +16,6 @@ describe('fire control', () => {
     expect(calculateSolution({ x: 0, y: 0 }, { x: 0, y: 20 }, 'spg', 'low').valid).toBe(true);
     expect(calculateSolution({ x: 0, y: 0 }, { x: 0, y: 20 }, 'spg', 'high').valid).toBe(true);
   });
-  it('uses adaptive terminal correction radii', () => {
-    expect(correctionRadius('mortar', 100)).toBe(30);
-    expect(correctionRadius('mortar', 600)).toBe(60);
-    expect(correctionRadius('spg', 3000)).toBe(250);
-  });
   it('iterates virtual aim points and resets after gun movement', () => {
     const once = applyImpact(target, { x: 10.1, y: 9.8 });
     expect(once.aimPoint.x).toBeCloseTo(9.9);
@@ -29,6 +24,11 @@ describe('fire control', () => {
     expect(twice.aimPoint.x).toBeCloseTo(9.85);
     expect(twice.aimPoint.y).toBeCloseTo(10.1);
     expect(resetCorrections([twice])[0]).toMatchObject({ aimPoint: target.point, impacts: [] });
+  });
+  it('keeps a distant impact in the current target correction chain', () => {
+    const corrected = applyImpact(target, { x: 25, y: -2 });
+    expect(corrected.impacts).toHaveLength(1);
+    expect(corrected.aimPoint).toEqual({ x: -5, y: 22 });
   });
 });
 

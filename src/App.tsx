@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Crosshair, Download, History, LocateFixed, Maximize, Menu, RotateCcw, Target as TargetIcon, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { TacticalMap } from './TacticalMap';
-import { MAPS, applyImpact, calculateSolution, correctionRadius, nextTargetId, resetCorrections, type Arc, type FireControlState, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
+import { MAPS, applyImpact, calculateSolution, nextTargetId, resetCorrections, type Arc, type FireControlState, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 import { exportDocument, importDocument, loadState, saveState } from './persistence';
 import { sampleTerrainPair } from './terrain';
 
@@ -58,13 +58,12 @@ export default function App() {
     if (mode === 'gun') {
       setState((current) => ({ ...current, gun: point, targets: resetCorrections(current.targets) })); setToast('炮位已更新，所有目标校射已重置'); return;
     }
-    if (mode === 'target' || !activeTarget) { createTarget(point); return; }
+    if (mode === 'target') { createTarget(point); return; }
+    if (!activeTarget) { setUndoSnapshot(null); setToast('请先选择一个目标，再记录落点'); return; }
     const missMeters = Math.hypot(point.x - activeTarget.point.x, point.y - activeTarget.point.y) * 100;
-    const targetRange = Math.hypot(activeTarget.point.x - state.gun.x, activeTarget.point.y - state.gun.y) * 100;
-    if (missMeters > correctionRadius(state.weaponId, targetRange)) { createTarget(point); setToast(`偏差 ${Math.round(missMeters)}m，已作为新目标；可撤销`); return; }
     setState((current) => ({ ...current, targets: current.targets.map((target) => target.id === activeTarget.id ? applyImpact(target, point) : target) }));
     setToast(`已记录落点，偏差 ${Math.round(missMeters)}m`);
-  }, [activeTarget, createTarget, mode, snapshot, state.gun, state.weaponId]);
+  }, [activeTarget, createTarget, mode, snapshot]);
   const handleMarkerMove = useCallback((kind: 'gun' | 'target', id: string | null, point: Point) => {
     if (kind === 'gun') setState((current) => {
       gunResetNoticeRef.current ||= current.targets.some((target) => target.impacts.length > 0);

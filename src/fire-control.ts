@@ -120,11 +120,6 @@ export function calculateSolution(gun: Point, aim: Point | null, weapon: WeaponI
   return mil == null ? { valid: false, bearing, distance, mil: 0, arc, reason: 'out-of-range' } : { valid: true, bearing, distance, mil, arc };
 }
 
-export function correctionRadius(weapon: WeaponId, rangeMeters: number) {
-  const limit = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-  return weapon === 'mortar' ? limit(rangeMeters * 0.1, 30, 80) : limit(rangeMeters * 0.1, 75, 250);
-}
-
 export function nextTargetId(targets: Target[]) {
   const max = targets.reduce((value, target) => Math.max(value, Number(target.id.slice(1)) || 0), 0);
   return `T${String(max + 1).padStart(2, '0')}`;
