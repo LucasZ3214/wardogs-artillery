@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { MAX_RANGE_METERS, type MapConfig, type MapMode, type Point, type Target, type WeaponId } from './fire-control';
+import { MAX_RANGE_METERS, type MapConfig, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 
 type Props = {
-  map: MapConfig; gun: Point; weaponId: WeaponId; targets: Target[]; activeTargetId: string | null; mode: MapMode; resetKey: number;
+  map: MapConfig; mapStyle: MapStyle; gun: Point; weaponId: WeaponId; targets: Target[]; activeTargetId: string | null; mode: MapMode; resetKey: number;
   onMapClick: (point: Point) => void; onTargetSelect: (id: string) => void;
   onMarkerMove: (kind: 'gun' | 'target', id: string | null, point: Point) => void;
   onMarkerMoveEnd: (kind: 'gun' | 'target', id: string | null, point: Point) => void;
@@ -37,7 +37,7 @@ export function TacticalMap(props: Props) {
     context.setTransform(dpr, 0, 0, dpr, 0, 0); context.clearRect(0, 0, width, height);
     context.fillStyle = '#0e1719'; context.fillRect(0, 0, width, height);
     const camera = cameraRef.current;
-    drawTiles(context, current.map, camera, width, height, () => invalidateRef.current());
+    drawTiles(context, current.map, current.mapStyle, camera, width, height, () => invalidateRef.current());
     drawGrid(context, current.map, camera, width, height);
     const gunScreen = worldToScreen(current.gun, camera, width, height);
     drawRangeRing(context, gunScreen, MAX_RANGE_METERS[current.weaponId] / 100 * camera.scale, MAX_RANGE_METERS[current.weaponId], current.weaponId);
@@ -88,7 +88,7 @@ export function TacticalMap(props: Props) {
     });
     observer.observe(canvas); fit(); return () => observer.disconnect();
   }, [draw, map, resetKey]);
-  useEffect(() => { draw(); }, [activeTargetId, draw, gun, map, mode, targets, weaponId]);
+  useEffect(() => { draw(); }, [activeTargetId, draw, gun, map, mode, props.mapStyle, targets, weaponId]);
 
   const hitMarker = (screen: Point): DragMarker => {
     const canvas = canvasRef.current; if (!canvas) return null;
@@ -156,15 +156,15 @@ function worldToScreen(point: Point, camera: Camera, width: number, height: numb
 function screenToWorld(point: Point, camera: Camera, width: number, height: number) { return { x: (point.x - width / 2) / camera.scale + camera.center.x, y: camera.center.y - (point.y - height / 2) / camera.scale }; }
 function clampToBounds(point: Point, map: MapConfig) { return { x: clamp(point.x, map.bounds.minX, map.bounds.maxX), y: clamp(point.y, map.bounds.minY, map.bounds.maxY) }; }
 
-function drawTiles(context: CanvasRenderingContext2D, map: MapConfig, camera: Camera, width: number, height: number, invalidate: () => void) {
+function drawTiles(context: CanvasRenderingContext2D, map: MapConfig, mapStyle: MapStyle, camera: Camera, width: number, height: number, invalidate: () => void) {
   const zoom = clamp(Math.round(Math.log2(camera.scale / (256 / TILE_WORLD_SIZE))), 0, 7); const count = 2 ** zoom; const worldPerTile = TILE_WORLD_SIZE / count;
   const topLeft = screenToWorld({ x: 0, y: 0 }, camera, width, height); const bottomRight = screenToWorld({ x: width, y: height }, camera, width, height);
   const minX = clamp(Math.floor((Math.min(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1); const maxX = clamp(Math.floor((Math.max(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1);
   const visibleMinY = Math.min(topLeft.y, bottomRight.y); const visibleMaxY = Math.max(topLeft.y, bottomRight.y);
   const minY = clamp(Math.floor((map.tileBounds.maxY - visibleMaxY) / worldPerTile), 0, count - 1); const maxY = clamp(Math.floor((map.tileBounds.maxY - visibleMinY) / worldPerTile), 0, count - 1);
-  context.save(); context.filter = 'brightness(1.45) contrast(1.12)';
+  context.save(); context.filter = mapStyle === 'grayscale' ? 'brightness(1.45) contrast(1.12)' : 'brightness(1.08) contrast(1.05)';
   for (let y = minY; y <= maxY; y += 1) for (let x = minX; x <= maxX; x += 1) {
-    const url = `${map.tiles}/zoom_${zoom}/${x}_${y}.webp`; let image = imageCache.get(url);
+    const url = `${map.tiles[mapStyle]}/zoom_${zoom}/${x}_${y}.webp`; let image = imageCache.get(url);
     if (!image) { image = new Image(); image.decoding = 'async'; image.referrerPolicy = 'no-referrer'; image.onload = invalidate; image.onerror = invalidate; image.src = url; imageCache.set(url, image); }
     if (!image.complete || !image.naturalWidth) continue;
     const screen = worldToScreen({ x: map.tileBounds.minX + x * worldPerTile, y: map.tileBounds.maxY - y * worldPerTile }, camera, width, height); const size = worldPerTile * camera.scale + 1;

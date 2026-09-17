@@ -2,6 +2,7 @@ export type Point = { x: number; y: number };
 export type WeaponId = 'mortar' | 'spg';
 export type Arc = 'single' | 'low' | 'high';
 export type MapMode = 'gun' | 'target' | 'impact';
+export type MapStyle = 'grayscale' | 'color';
 
 export type Impact = {
   id: string;
@@ -48,17 +49,21 @@ export type MapConfig = {
   name: string;
   bounds: { minX: number; maxX: number; minY: number; maxY: number };
   tileBounds: { minX: number; maxX: number; minY: number; maxY: number };
-  tiles: string;
+  tiles: Record<MapStyle, string>;
   markers: MapMarker[];
 };
 
-const CDN = 'https://assets.wardogs-artillery.com/releases/assets-v1/maps/tiles';
+const CDN = 'https://assets.wardogs-artillery.com/releases/assets-v1/maps';
+const tileSources = (mapId: string): Record<MapStyle, string> => ({
+  grayscale: `${CDN}/tiles/${mapId}`,
+  color: `${CDN}/tiles-color/${mapId}`,
+});
 const marker = (icon: string, x: number, y: number, label: string, minZoom = 0.4): MapMarker => ({ icon, x: x / 100, y: y / 100, label, minZoom });
 
 export const MAPS: Record<string, MapConfig> = {
   bakurani: {
     id: 'bakurani', name: 'BAKURANI', bounds: { minX: 23.35, maxX: 133.6, minY: 19.34, maxY: 129.65 },
-    tileBounds: { minX: -0.03, maxX: 163.81, minY: -0.01, maxY: 163.83 }, tiles: `${CDN}/bakurani`,
+    tileBounds: { minX: -0.03, maxX: 163.81, minY: -0.01, maxY: 163.83 }, tiles: tileSources('bakurani'),
     markers: [
       marker('tower', 8052, 6985, 'Tower 1'), marker('tower', 7719, 7000, 'Tower 2'), marker('tower', 7719, 7344, 'Tower 3'), marker('tower', 8364, 7285, 'Tower 4'), marker('tower', 8222, 6841, 'Tower 5'),
       marker('valkyra', 11875, 7093, 'Valkyra', 2), marker('manticore', 4009, 7752, 'Manticore', 2), marker('lonestar', 8746, 3250, 'Lonestar', 2),
@@ -67,7 +72,7 @@ export const MAPS: Record<string, MapConfig> = {
   },
   ozeti: {
     id: 'ozeti', name: 'OZETI', bounds: { minX: 57.58, maxX: 143.07, minY: 21.81, maxY: 99.56 },
-    tileBounds: { minX: -0.03, maxX: 163.81, minY: -0.01, maxY: 163.83 }, tiles: `${CDN}/ozeti`,
+    tileBounds: { minX: -0.03, maxX: 163.81, minY: -0.01, maxY: 163.83 }, tiles: tileSources('ozeti'),
     markers: [
       marker('tower', 9580, 6282, 'Tower 1'), marker('tower', 10037, 5923, 'Tower 2'), marker('tower', 10449, 6371, 'Tower 3'), marker('tower', 10062, 6764, 'Tower 4'),
       marker('valkyra', 13803, 6733, 'Valkyra', 2), marker('manticore', 6828, 8803, 'Manticore', 2), marker('lonestar', 8373, 3069, 'Lonestar', 2),
@@ -76,7 +81,7 @@ export const MAPS: Record<string, MapConfig> = {
   },
   zestafona: {
     id: 'zestafona', name: 'ZESTAFONA', bounds: { minX: 19.9, maxX: 124.89, minY: 50.7, maxY: 141.9 },
-    tileBounds: { minX: -0.03, maxX: 163.81, minY: -0.01, maxY: 163.83 }, tiles: `${CDN}/zestafona`,
+    tileBounds: { minX: -0.03, maxX: 163.81, minY: -0.01, maxY: 163.83 }, tiles: tileSources('zestafona'),
     markers: [
       marker('tower', 6859.9808, 10415.3, 'Tower 1'), marker('tower', 7289.2416, 10507.0592, 'Tower 2'), marker('tower', 7017.2672, 10017.17, 'Tower 3'),
       marker('valkyra', 3943.6288, 12494.4384, 'Valkyra', 2), marker('manticore', 10466.0992, 11508.1216, 'Manticore', 2), marker('lonestar', 6800.9984, 6660.096, 'Lonestar', 2),

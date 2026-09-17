@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Crosshair, Download, History, LocateFixed, Maximize, Menu, RotateCcw, Settings2, Target as TargetIcon, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { TacticalMap } from './TacticalMap';
-import { MAPS, applyImpact, calculateSolution, correctionRadius, nextTargetId, resetCorrections, type Arc, type FireControlState, type MapMode, type Point, type Target, type WeaponId } from './fire-control';
+import { MAPS, applyImpact, calculateSolution, correctionRadius, nextTargetId, resetCorrections, type Arc, type FireControlState, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 import { exportDocument, importDocument, loadState, saveState } from './persistence';
 import { sampleTerrainPair } from './terrain';
 
@@ -21,6 +21,7 @@ export default function App() {
   const [toast, setToast] = useState('纯前端模式 · 点击地图建立目标');
   const [undoSnapshot, setUndoSnapshot] = useState<FireControlState | null>(null);
   const [mapResetKey, setMapResetKey] = useState(0);
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => localStorage.getItem('wardogs-map-style-v1') === 'color' ? 'color' : 'grayscale');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const gunResetNoticeRef = useRef(false);
@@ -29,6 +30,7 @@ export default function App() {
   const solution = useMemo(() => calculateSolution(state.gun, activeTarget?.aimPoint ?? null, state.weaponId, state.arc), [activeTarget, state.arc, state.gun, state.weaponId]);
 
   useEffect(() => { saveState(state); }, [state]);
+  useEffect(() => { localStorage.setItem('wardogs-map-style-v1', mapStyle); }, [mapStyle]);
   useEffect(() => {
     let stale = false;
     if (!activeTarget) { setState((current) => ({ ...current, terrain: { ...emptyTerrain, status: 'unavailable' } })); return; }
@@ -119,12 +121,13 @@ export default function App() {
       <div className={`terrain-readout terrain-readout--${state.terrain.status}`} title="Terrain3D 相对高差，仅供参考，不参与密位计算"><span>ΔZ</span><strong>{state.terrain.status === 'ready' && state.terrain.deltaZ != null ? `${state.terrain.deltaZ >= 0 ? '+' : ''}${state.terrain.deltaZ.toFixed(1)}` : '—'}</strong><small>m</small></div>
     </header>
 
-    <TacticalMap map={MAPS[state.mapId]} gun={state.gun} weaponId={state.weaponId} targets={mapTargets} activeTargetId={state.activeTargetId} mode={mode} resetKey={mapResetKey} onMapClick={handleMapClick} onTargetSelect={selectTarget} onMarkerMove={handleMarkerMove} onMarkerMoveEnd={(kind) => handleMarkerMoveEnd(kind)} />
+    <TacticalMap map={MAPS[state.mapId]} mapStyle={mapStyle} gun={state.gun} weaponId={state.weaponId} targets={mapTargets} activeTargetId={state.activeTargetId} mode={mode} resetKey={mapResetKey} onMapClick={handleMapClick} onTargetSelect={selectTarget} onMarkerMove={handleMarkerMove} onMarkerMoveEnd={(kind) => handleMarkerMoveEnd(kind)} />
 
     <section className={`control-pod ${controlsOpen ? '' : 'control-pod--closed'}`} aria-label="地图和武器设置">
       <button className="icon-button control-toggle" onClick={() => setControlsOpen((value) => !value)} aria-label={controlsOpen ? '收起设置' : '展开设置'}>{controlsOpen ? <X /> : <Menu />}</button>
       {controlsOpen && <div className="control-pod__body">
         <label>地图<select value={state.mapId} onChange={(event) => updateMap(event.target.value)}>{Object.values(MAPS).map((map) => <option key={map.id} value={map.id}>{map.name}</option>)}</select></label>
+        <label>图层<select value={mapStyle} onChange={(event) => setMapStyle(event.target.value as MapStyle)}><option value="grayscale">灰度</option><option value="color">彩色</option></select></label>
         <label>武器<select value={state.weaponId} onChange={(event) => updateWeapon(event.target.value as WeaponId)}><option value="mortar">L81 MORTAR</option><option value="spg">SPH-2</option></select></label>
         {state.weaponId === 'spg' && <label>弹道<select value={state.arc} onChange={(event) => setState((current) => ({ ...current, arc: event.target.value as Arc }))}><option value="high">高弧</option><option value="low">低弧</option></select></label>}
       </div>}

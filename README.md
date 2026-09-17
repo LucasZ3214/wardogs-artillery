@@ -7,7 +7,7 @@ WARDOGS 非官方纯前端火炮计算器，针对 iPad Chrome 触控操作设�
 ## 功能
 
 - L81 MORTAR 与 SPH-2 高、低弹道计算
-- BAKURANI、OZETI、ZESTAFONA 社区地图与地标
+- BAKURANI、OZETI、ZESTAFONA 社区地图、灰度/彩色图层与地标
 - 炮位、目标、实际落点和多次迭代校射
 - 目标历史、撤销、删除及 JSON 导入导出
 - 单指平移、双指缩放、准星拖动和全屏布局
