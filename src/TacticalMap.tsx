@@ -162,14 +162,15 @@ function drawTiles(context: CanvasRenderingContext2D, map: MapConfig, camera: Ca
   const minX = clamp(Math.floor((Math.min(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1); const maxX = clamp(Math.floor((Math.max(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1);
   const visibleMinY = Math.min(topLeft.y, bottomRight.y); const visibleMaxY = Math.max(topLeft.y, bottomRight.y);
   const minY = clamp(Math.floor((map.tileBounds.maxY - visibleMaxY) / worldPerTile), 0, count - 1); const maxY = clamp(Math.floor((map.tileBounds.maxY - visibleMinY) / worldPerTile), 0, count - 1);
+  context.save(); context.filter = 'brightness(1.45) contrast(1.12)';
   for (let y = minY; y <= maxY; y += 1) for (let x = minX; x <= maxX; x += 1) {
     const url = `${map.tiles}/zoom_${zoom}/${x}_${y}.webp`; let image = imageCache.get(url);
-    if (!image) { image = new Image(); image.decoding = 'async'; image.src = url; image.onload = invalidate; imageCache.set(url, image); }
+    if (!image) { image = new Image(); image.decoding = 'async'; image.referrerPolicy = 'no-referrer'; image.onload = invalidate; image.onerror = invalidate; image.src = url; imageCache.set(url, image); }
     if (!image.complete || !image.naturalWidth) continue;
     const screen = worldToScreen({ x: map.tileBounds.minX + x * worldPerTile, y: map.tileBounds.maxY - y * worldPerTile }, camera, width, height); const size = worldPerTile * camera.scale + 1;
     context.drawImage(image, screen.x, screen.y, size, size);
   }
-  context.fillStyle = 'rgba(7,14,16,.18)'; context.fillRect(0, 0, width, height);
+  context.restore(); context.fillStyle = 'rgba(7,14,16,.06)'; context.fillRect(0, 0, width, height);
 }
 function drawGrid(context: CanvasRenderingContext2D, map: MapConfig, camera: Camera, width: number, height: number) {
   const step = camera.scale > 60 ? .5 : camera.scale > 30 ? 1 : camera.scale > 12 ? 2 : camera.scale > 5 ? 5 : 10; const startX = Math.ceil(map.bounds.minX / step) * step; const startY = Math.ceil(map.bounds.minY / step) * step;
