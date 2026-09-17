@@ -1,8 +1,32 @@
 export type Point = { x: number; y: number };
 export type WeaponId = 'mortar' | 'spg';
 export type Arc = 'single' | 'low' | 'high';
-export type MapMode = 'gun' | 'target' | 'impact';
+export type MapMode = 'gun' | 'target' | 'impact' | 'control-zone' | 'control-zone-edge';
 export type MapStyle = 'grayscale' | 'color';
+export type ControlZone = { center: Point; alternateCenter: Point | null; edgePoints: [Point, Point] | null };
+
+export const CONTROL_ZONE_AREA_M2 = 4_000_000;
+export const CONTROL_ZONE_RADIUS_METERS = Math.sqrt(CONTROL_ZONE_AREA_M2 / Math.PI);
+export const CONTROL_ZONE_RADIUS_UNITS = CONTROL_ZONE_RADIUS_METERS / 100;
+
+export function controlZoneCentersFromEdgePoints(a: Point, b: Point): [Point, Point] | null {
+  const dx = b.x - a.x; const dy = b.y - a.y; const chord = Math.hypot(dx, dy);
+  if (chord <= 1e-6 || chord > CONTROL_ZONE_RADIUS_UNITS * 2) return null;
+  const midpoint = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  const offset = Math.sqrt(Math.max(0, CONTROL_ZONE_RADIUS_UNITS ** 2 - (chord / 2) ** 2));
+  const normal = { x: -dy / chord, y: dx / chord };
+  return [
+    { x: midpoint.x + normal.x * offset, y: midpoint.y + normal.y * offset },
+    { x: midpoint.x - normal.x * offset, y: midpoint.y - normal.y * offset },
+  ];
+}
+
+export function orderControlZoneCentersToward(centers: [Point, Point], reference: Point): [Point, Point] {
+  const [first, second] = centers;
+  const firstDistance = Math.hypot(first.x - reference.x, first.y - reference.y);
+  const secondDistance = Math.hypot(second.x - reference.x, second.y - reference.y);
+  return firstDistance <= secondDistance ? [first, second] : [second, first];
+}
 
 export type Impact = {
   id: string;

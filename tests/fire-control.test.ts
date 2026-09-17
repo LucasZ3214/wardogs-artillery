@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyImpact, calculateSolution, resetCorrections, type Target } from '../src/fire-control';
+import { CONTROL_ZONE_RADIUS_UNITS, applyImpact, calculateSolution, controlZoneCentersFromEdgePoints, orderControlZoneCentersToward, resetCorrections, type Target } from '../src/fire-control';
 import { exportDocument, importDocument } from '../src/persistence';
 import { sampleChunk } from '../src/terrain';
 
@@ -29,6 +29,20 @@ describe('fire control', () => {
     const corrected = applyImpact(target, { x: 25, y: -2 });
     expect(corrected.impacts).toHaveLength(1);
     expect(corrected.aimPoint).toEqual({ x: -5, y: 22 });
+  });
+  it('locates the two fixed-radius control-zone centers from two edge points', () => {
+    const centers = controlZoneCentersFromEdgePoints({ x: -5, y: 0 }, { x: 5, y: 0 });
+    expect(centers).not.toBeNull();
+    for (const center of centers ?? []) {
+      expect(Math.hypot(center.x + 5, center.y)).toBeCloseTo(CONTROL_ZONE_RADIUS_UNITS);
+      expect(Math.hypot(center.x - 5, center.y)).toBeCloseTo(CONTROL_ZONE_RADIUS_UNITS);
+    }
+    expect(controlZoneCentersFromEdgePoints({ x: 0, y: 0 }, { x: CONTROL_ZONE_RADIUS_UNITS * 2 + .1, y: 0 })).toBeNull();
+  });
+  it('orders the mirrored control-zone centers toward the tower-group center', () => {
+    const ordered = orderControlZoneCentersToward([{ x: 10, y: 8 }, { x: 10, y: -8 }], { x: 12, y: 20 });
+    expect(ordered[0]).toEqual({ x: 10, y: 8 });
+    expect(ordered[1]).toEqual({ x: 10, y: -8 });
   });
 });
 

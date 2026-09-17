@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { MAX_RANGE_METERS, type MapConfig, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
+import { CONTROL_ZONE_RADIUS_METERS, CONTROL_ZONE_RADIUS_UNITS, MAX_RANGE_METERS, type ControlZone, type MapConfig, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 
 type Props = {
-  map: MapConfig; mapStyle: MapStyle; gun: Point; weaponId: WeaponId; targets: Target[]; activeTargetId: string | null; mode: MapMode; resetKey: number;
+  map: MapConfig; mapStyle: MapStyle; gun: Point; weaponId: WeaponId; targets: Target[]; activeTargetId: string | null; mode: MapMode; resetKey: number; controlZone: ControlZone | null; czEdgeStart: Point | null;
   onMapClick: (point: Point) => void; onTargetSelect: (id: string) => void;
-  onMarkerMove: (kind: 'gun' | 'target', id: string | null, point: Point) => void;
-  onMarkerMoveEnd: (kind: 'gun' | 'target', id: string | null, point: Point) => void;
+  onMarkerMove: (kind: 'gun' | 'target' | 'control-zone', id: string | null, point: Point) => void;
+  onMarkerMoveEnd: (kind: 'gun' | 'target' | 'control-zone', id: string | null, point: Point) => void;
 };
 type Camera = { center: Point; scale: number; fitScale: number };
 type PointerState = { startX: number; startY: number; x: number; y: number };
-type DragMarker = { kind: 'gun' | 'target'; id: string | null } | null;
+type DragMarker = { kind: 'gun' | 'target' | 'control-zone'; id: string | null } | null;
 const TILE_WORLD_SIZE = 163.84;
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -39,6 +39,8 @@ export function TacticalMap(props: Props) {
     const camera = cameraRef.current;
     drawTiles(context, current.map, current.mapStyle, camera, width, height, () => invalidateRef.current());
     drawGrid(context, current.map, camera, width, height);
+    if (current.controlZone) drawControlZone(context, current.controlZone, current.mapStyle, camera, width, height);
+    if (current.czEdgeStart) drawControlZoneEdgePoint(context, worldToScreen(current.czEdgeStart, camera, width, height), '边点 1');
     const gunScreen = worldToScreen(current.gun, camera, width, height);
     drawRangeRing(context, gunScreen, MAX_RANGE_METERS[current.weaponId] / 100 * camera.scale, MAX_RANGE_METERS[current.weaponId], current.weaponId, current.mapStyle);
 
@@ -66,7 +68,7 @@ export function TacticalMap(props: Props) {
     drawGun(context, gunScreen, current.mapStyle);
     context.fillStyle = 'rgba(7,13,15,.78)'; context.fillRect(14, height - 39, 174, 25);
     context.fillStyle = '#c9d5d1'; context.font = '600 12px ui-monospace, monospace';
-    const modeName = current.mode === 'gun' ? '炮位' : current.mode === 'target' ? '目标' : '落点';
+    const modeName = current.mode === 'gun' ? '炮位' : current.mode === 'target' ? '目标' : current.mode === 'impact' ? '落点' : current.mode === 'control-zone' ? 'CZ中心' : 'CZ两点';
     context.fillText(`${modeName}模式 · ${Math.round(camera.scale / camera.fitScale * 100)}%`, 24, height - 22);
   }, []);
 
@@ -88,11 +90,13 @@ export function TacticalMap(props: Props) {
     });
     observer.observe(canvas); fit(); return () => observer.disconnect();
   }, [draw, map, resetKey]);
-  useEffect(() => { draw(); }, [activeTargetId, draw, gun, map, mode, props.mapStyle, targets, weaponId]);
+  useEffect(() => { draw(); }, [activeTargetId, draw, gun, map, mode, props.controlZone, props.czEdgeStart, props.mapStyle, targets, weaponId]);
 
   const hitMarker = (screen: Point): DragMarker => {
     const canvas = canvasRef.current; if (!canvas) return null;
     const camera = cameraRef.current; const width = canvas.clientWidth; const height = canvas.clientHeight;
+    if ((propsRef.current.mode === 'control-zone' || propsRef.current.mode === 'control-zone-edge') && propsRef.current.controlZone && distance(screen, worldToScreen(propsRef.current.controlZone.center, camera, width, height)) <= 30) return { kind: 'control-zone', id: null };
+    if (propsRef.current.mode === 'control-zone' || propsRef.current.mode === 'control-zone-edge') return null;
     if (propsRef.current.mode !== 'impact' && distance(screen, worldToScreen(propsRef.current.gun, camera, width, height)) <= 30) return { kind: 'gun', id: null };
     for (const target of [...propsRef.current.targets].reverse()) {
       if (distance(screen, worldToScreen(target.point, camera, width, height)) > 30) continue;
@@ -179,6 +183,14 @@ function drawGrid(context: CanvasRenderingContext2D, map: MapConfig, camera: Cam
   for (let y = startY; y <= map.bounds.maxY; y += step) { const a = worldToScreen({ x: map.bounds.minX, y }, camera, width, height); const b = worldToScreen({ x: map.bounds.maxX, y }, camera, width, height); context.strokeStyle = Math.abs(y / step) % 5 === 0 ? 'rgba(207,225,218,.25)' : 'rgba(207,225,218,.1)'; context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke(); if (step >= 1) { context.fillStyle = 'rgba(224,235,231,.58)'; context.fillText(y.toFixed(0), Math.max(4, a.x + 3), a.y - 3); } }
   context.restore();
 }
+function drawControlZone(context: CanvasRenderingContext2D, zone: ControlZone, mapStyle: MapStyle, camera: Camera, width: number, height: number) {
+  const center = worldToScreen(zone.center, camera, width, height); const radius = CONTROL_ZONE_RADIUS_UNITS * camera.scale;
+  if (zone.alternateCenter) { const alternate = worldToScreen(zone.alternateCenter, camera, width, height); context.save(); context.setLineDash([6, 8]); context.strokeStyle = 'rgba(255,85,117,.32)'; context.lineWidth = 1.25; context.beginPath(); context.arc(alternate.x, alternate.y, radius, 0, Math.PI * 2); context.stroke(); context.restore(); drawControlZoneEdgePoint(context, alternate, '备选'); }
+  context.save(); context.fillStyle = 'rgba(255,85,117,.055)'; context.beginPath(); context.arc(center.x, center.y, radius, 0, Math.PI * 2); context.fill(); if (mapStyle === 'color') { context.strokeStyle = 'rgba(4,10,12,.9)'; context.lineWidth = 3; context.stroke(); } context.strokeStyle = '#ff5575'; context.lineWidth = 1.5; context.stroke(); context.restore();
+  if (zone.edgePoints) { const a = worldToScreen(zone.edgePoints[0], camera, width, height); const b = worldToScreen(zone.edgePoints[1], camera, width, height); context.save(); context.setLineDash([5, 5]); context.strokeStyle = 'rgba(255,188,202,.75)'; context.lineWidth = 1; context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke(); context.restore(); drawControlZoneEdgePoint(context, a, '1'); drawControlZoneEdgePoint(context, b, '2'); }
+  drawReticle(context, center, '#ff5575', 12, 6, 1.5, true, mapStyle === 'color'); drawLabel(context, { x: center.x, y: center.y - radius - 8 }, `CZ 4.00km² · R${Math.round(CONTROL_ZONE_RADIUS_METERS)}m`, '#ff9aae');
+}
+function drawControlZoneEdgePoint(context: CanvasRenderingContext2D, point: Point, label: string) { context.save(); context.fillStyle = '#ff9aae'; context.strokeStyle = 'rgba(4,10,12,.9)'; context.lineWidth = 2; context.beginPath(); context.arc(point.x, point.y, 4, 0, Math.PI * 2); context.fill(); context.stroke(); context.restore(); drawLabel(context, { x: point.x, y: point.y - 12 }, label, '#ffb4c2'); }
 function drawRangeRing(context: CanvasRenderingContext2D, point: Point, radius: number, meters: number, weaponId: WeaponId, mapStyle: MapStyle) {
   context.save(); context.fillStyle = 'rgba(95,215,255,.035)'; context.setLineDash([9, 7]);
   context.beginPath(); context.arc(point.x, point.y, radius, 0, Math.PI * 2); context.fill();
