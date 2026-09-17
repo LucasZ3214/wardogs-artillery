@@ -229,6 +229,8 @@ export default function App() {
       <ModeButton active={mode === 'gun'} onClick={() => changeMode('gun')} icon={<LocateFixed />} label="炮位" />
       <ModeButton active={mode === 'target'} onClick={() => changeMode('target')} icon={<TargetIcon />} label="目标" />
       <ModeButton active={mode === 'impact'} onClick={() => changeMode('impact')} icon={<Crosshair />} label="落点" />
+    </nav>
+    <nav className="cz-mode-switcher" aria-label="Control Zone 绘制模式">
       <ModeButton active={mode === 'control-zone'} onClick={() => changeMode('control-zone')} icon={<CircleDot />} label="CZ中心" />
       <ModeButton active={mode === 'control-zone-edge'} onClick={() => changeMode('control-zone-edge')} icon={<Circle />} label="CZ两点" />
     </nav>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { CONTROL_ZONE_RADIUS_METERS, CONTROL_ZONE_RADIUS_UNITS, MAX_RANGE_METERS, type ControlZone, type MapConfig, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
+import { CONTROL_ZONE_DIAMETER_METERS, CONTROL_ZONE_RADIUS_UNITS, MAX_RANGE_METERS, type ControlZone, type MapConfig, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 
 type Props = {
   map: MapConfig; mapStyle: MapStyle; gun: Point; weaponId: WeaponId; targets: Target[]; activeTargetId: string | null; mode: MapMode; resetKey: number; controlZone: ControlZone | null; czEdgeStart: Point | null;
@@ -188,7 +188,7 @@ function drawControlZone(context: CanvasRenderingContext2D, zone: ControlZone, m
   if (zone.alternateCenter) { const alternate = worldToScreen(zone.alternateCenter, camera, width, height); context.save(); context.setLineDash([6, 8]); context.strokeStyle = 'rgba(255,85,117,.32)'; context.lineWidth = 1.25; context.beginPath(); context.arc(alternate.x, alternate.y, radius, 0, Math.PI * 2); context.stroke(); context.restore(); drawControlZoneEdgePoint(context, alternate, '备选'); }
   context.save(); context.fillStyle = 'rgba(255,85,117,.055)'; context.beginPath(); context.arc(center.x, center.y, radius, 0, Math.PI * 2); context.fill(); if (mapStyle === 'color') { context.strokeStyle = 'rgba(4,10,12,.9)'; context.lineWidth = 3; context.stroke(); } context.strokeStyle = '#ff5575'; context.lineWidth = 1.5; context.stroke(); context.restore();
   if (zone.edgePoints) { const a = worldToScreen(zone.edgePoints[0], camera, width, height); const b = worldToScreen(zone.edgePoints[1], camera, width, height); context.save(); context.setLineDash([5, 5]); context.strokeStyle = 'rgba(255,188,202,.75)'; context.lineWidth = 1; context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke(); context.restore(); drawControlZoneEdgePoint(context, a, '1'); drawControlZoneEdgePoint(context, b, '2'); }
-  drawReticle(context, center, '#ff5575', 12, 6, 1.5, true, mapStyle === 'color'); drawLabel(context, { x: center.x, y: center.y - radius - 8 }, `CZ 4.00km² · R${Math.round(CONTROL_ZONE_RADIUS_METERS)}m`, '#ff9aae');
+  drawReticle(context, center, '#ff5575', 12, 6, 1.5, true, mapStyle === 'color'); drawLabel(context, { x: center.x, y: center.y - radius - 8 }, `CZ Ø${CONTROL_ZONE_DIAMETER_METERS}m`, '#ff9aae');
 }
 function drawControlZoneEdgePoint(context: CanvasRenderingContext2D, point: Point, label: string) { context.save(); context.fillStyle = '#ff9aae'; context.strokeStyle = 'rgba(4,10,12,.9)'; context.lineWidth = 2; context.beginPath(); context.arc(point.x, point.y, 4, 0, Math.PI * 2); context.fill(); context.stroke(); context.restore(); drawLabel(context, { x: point.x, y: point.y - 12 }, label, '#ffb4c2'); }
 function drawRangeRing(context: CanvasRenderingContext2D, point: Point, radius: number, meters: number, weaponId: WeaponId, mapStyle: MapStyle) {

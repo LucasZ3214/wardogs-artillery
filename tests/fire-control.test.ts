@@ -31,6 +31,7 @@ describe('fire control', () => {
     expect(corrected.aimPoint).toEqual({ x: -5, y: 22 });
   });
   it('locates the two fixed-radius control-zone centers from two edge points', () => {
+    expect(CONTROL_ZONE_RADIUS_UNITS).toBe(10);
     const centers = controlZoneCentersFromEdgePoints({ x: -5, y: 0 }, { x: 5, y: 0 });
     expect(centers).not.toBeNull();
     for (const center of centers ?? []) {

@@ -56,6 +56,10 @@ button { -webkit-tap-highlight-color: transparent; }
 .mode-switcher button { min-width: 96px; min-height: 52px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #a8b8b3; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-weight: 800; }
 .mode-switcher button svg { width: 19px; }
 .mode-switcher button.active { color: #101616; background: var(--amber); border-color: #ffd27b; box-shadow: 0 0 18px rgba(241,185,79,.2); }
+.cz-mode-switcher { position: absolute; z-index: 18; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; padding: 5px; gap: 4px; border: 1px solid rgba(255,116,143,.34); border-radius: 13px; background: var(--panel-strong); box-shadow: 0 12px 34px rgba(0,0,0,.45); }
+.cz-mode-switcher button { min-width: 86px; min-height: 52px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #d7a0ab; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; font-weight: 800; }
+.cz-mode-switcher button svg { width: 19px; }
+.cz-mode-switcher button.active { color: #19070b; background: #ff708c; border-color: #ff9aae; box-shadow: 0 0 18px rgba(255,85,117,.22); }
 .history-tab { position: absolute; z-index: 15; right: 12px; top: 154px; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); display: flex; gap: 8px; align-items: center; cursor: pointer; font-weight: 800; }
 .history-tab svg { width: 19px; }
 .status-toast { position: absolute; z-index: 12; left: 50%; bottom: calc(83px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 8px 14px; border: 1px solid var(--line); border-radius: 20px; background: rgba(7,14,16,.82); color: #c9d7d2; font-size: .82rem; white-space: nowrap; pointer-events: none; }
@@ -114,6 +118,8 @@ button { -webkit-tap-highlight-color: transparent; }
   .history-tab span { display: none; }
   .mode-switcher { bottom: calc(13px + env(safe-area-inset-bottom)); }
   .mode-switcher button { min-width: 76px; min-height: 49px; }
+  .cz-mode-switcher { right: 8px; bottom: calc(13px + env(safe-area-inset-bottom)); }
+  .cz-mode-switcher button { min-width: 76px; min-height: 49px; }
   .status-toast { display: none; }
   .map-attribution { bottom: calc(74px + env(safe-area-inset-bottom)); max-width: 60vw; }
 }
@@ -121,6 +127,8 @@ button { -webkit-tap-highlight-color: transparent; }
   .solution-bar { grid-template-columns: 46px repeat(3, 1fr) 54px; }
   .terrain-readout strong { font-size: .82rem; }
   .mode-switcher button { min-width: 67px; gap: 5px; }
+  .cz-mode-switcher button { min-width: 48px; }
+  .cz-mode-switcher button span { display: none; }
   .control-pod__body { display: grid; grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; } }
