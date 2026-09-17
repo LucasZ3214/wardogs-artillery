@@ -5,7 +5,7 @@ export type MapMode = 'gun' | 'target' | 'impact' | 'control-zone' | 'control-zo
 export type MapStyle = 'grayscale' | 'color';
 export type ControlZone = { center: Point; alternateCenter: Point | null; edgePoints: [Point, Point] | null };
 
-export const CONTROL_ZONE_DIAMETER_METERS = 2_000;
+export const CONTROL_ZONE_DIAMETER_METERS = 1_000;
 export const CONTROL_ZONE_RADIUS_METERS = CONTROL_ZONE_DIAMETER_METERS / 2;
 export const CONTROL_ZONE_AREA_M2 = Math.PI * CONTROL_ZONE_RADIUS_METERS ** 2;
 export const CONTROL_ZONE_RADIUS_UNITS = CONTROL_ZONE_RADIUS_METERS / 100;
