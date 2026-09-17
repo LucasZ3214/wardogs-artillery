@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Crosshair, Download, History, LocateFixed, Maximize, Menu, RotateCcw, Target as TargetIcon, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { Check, Crosshair, Download, History, LocateFixed, Maximize, Menu, Pencil, RotateCcw, Target as TargetIcon, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { TacticalMap } from './TacticalMap';
 import { MAPS, applyImpact, calculateSolution, nextTargetId, resetCorrections, type Arc, type FireControlState, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 import { exportDocument, importDocument, loadState, saveState } from './persistence';
@@ -22,11 +22,20 @@ export default function App() {
   const [undoSnapshot, setUndoSnapshot] = useState<FireControlState | null>(null);
   const [mapResetKey, setMapResetKey] = useState(0);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => localStorage.getItem('wardogs-map-style-v1') === 'color' ? 'color' : 'grayscale');
+  const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
   const importInputRef = useRef<HTMLInputElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const gunResetNoticeRef = useRef(false);
   const activeTarget = useMemo(() => state.targets.find((target) => target.id === state.activeTargetId && target.mapId === state.mapId) ?? null, [state.activeTargetId, state.mapId, state.targets]);
   const mapTargets = useMemo(() => state.targets.filter((target) => target.mapId === state.mapId), [state.mapId, state.targets]);
   const solution = useMemo(() => calculateSolution(state.gun, activeTarget?.aimPoint ?? null, state.weaponId, state.arc), [activeTarget, state.arc, state.gun, state.weaponId]);
+
+  useEffect(() => {
+    if (!editingTargetId) return;
+    const frame = window.requestAnimationFrame(() => { renameInputRef.current?.focus(); renameInputRef.current?.select(); });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editingTargetId]);
 
   useEffect(() => { saveState(state); }, [state]);
   useEffect(() => { localStorage.setItem('wardogs-map-style-v1', mapStyle); }, [mapStyle]);
@@ -100,7 +109,16 @@ export default function App() {
       const next = remaining.filter((target) => target.mapId === current.mapId).sort((a, b) => b.lastUsedAt.localeCompare(a.lastUsedAt))[0];
       return { ...current, targets: remaining, activeTargetId: current.activeTargetId === id ? next?.id ?? null : current.activeTargetId };
     });
+    if (editingTargetId === id) { setEditingTargetId(null); setRenameDraft(''); }
     setToast(`${id} 已删除`);
+  };
+  const beginRename = (target: Target) => { setEditingTargetId(target.id); setRenameDraft(target.name); };
+  const cancelRename = () => { setEditingTargetId(null); setRenameDraft(''); };
+  const saveRename = (id: string) => {
+    const name = renameDraft.trim(); if (!name) { setToast('目标名称不能为空'); return; }
+    const stamp = new Date().toISOString();
+    setState((current) => ({ ...current, targets: current.targets.map((target) => target.id === id ? { ...target, name, lastUsedAt: stamp } : target) }));
+    setEditingTargetId(null); setRenameDraft(''); setToast(`${id} 已重命名为 ${name}`);
   };
   const downloadHistory = () => {
     const blob = new Blob([JSON.stringify(exportDocument(state), null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `wardogs-targets-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url);
@@ -164,12 +182,11 @@ export default function App() {
         <div className="history-tools"><button onClick={downloadHistory}><Download />导出</button><button onClick={() => importInputRef.current?.click()}><Upload />导入</button><input ref={importInputRef} hidden type="file" accept="application/json" onChange={(event) => void importHistory(event.target.files?.[0])} /></div>
         <div className="history-list">{history.length ? history.map((target) => {
           const targetSolution = calculateSolution(state.gun, target.aimPoint, state.weaponId, state.arc);
+          const editing = editingTargetId === target.id;
           return <article key={target.id} className={`history-card ${target.id === state.activeTargetId ? 'is-active' : ''}`}>
-            <button className="history-card__select" aria-label={`切换到 ${target.id} ${target.name}`} onClick={() => { selectTarget(target.id); setHistoryOpen(false); }}>
-              <div className="history-card__title"><strong>{target.id}</strong><span>{target.name}</span></div>
-              <div className="history-card__metrics"><span>{targetSolution.valid ? `${Math.round(targetSolution.bearing)}°` : '超界'}</span><span>{targetSolution.valid ? `${Math.round(targetSolution.distance)}m` : '—'}</span><span>{targetSolution.valid ? `${Math.round(targetSolution.mil)}mil` : '—'}</span></div>
-            </button>
-            <div className="history-card__footer"><span>{target.impacts.length ? `已校射 ${target.impacts.length} 次` : '未校射'}</span><button className="history-card__delete" aria-label={`删除 ${target.id}`} onClick={() => deleteTarget(target.id)}><Trash2 /></button></div>
+            {editing ? <div className="history-card__rename"><strong>{target.id}</strong><input ref={renameInputRef} maxLength={80} value={renameDraft} aria-label={`重命名 ${target.id}`} onChange={(event) => setRenameDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') saveRename(target.id); if (event.key === 'Escape') cancelRename(); }} /></div> : <button className="history-card__select" aria-label={`切换到 ${target.id} ${target.name}`} onClick={() => { selectTarget(target.id); setHistoryOpen(false); }}><div className="history-card__title"><strong>{target.id}</strong><span>{target.name}</span></div></button>}
+            <div className="history-card__metrics"><span>{targetSolution.valid ? `${Math.round(targetSolution.bearing)}°` : '超界'}</span><span>{targetSolution.valid ? `${Math.round(targetSolution.distance)}m` : '—'}</span><span>{targetSolution.valid ? `${Math.round(targetSolution.mil)}mil` : '—'}</span></div>
+            <div className="history-card__footer"><span>{target.impacts.length ? `已校射 ${target.impacts.length} 次` : '未校射'}</span><div className="history-card__actions">{editing ? <><button aria-label={`保存 ${target.id} 名称`} onClick={() => saveRename(target.id)}><Check /></button><button aria-label="取消重命名" onClick={cancelRename}><X /></button></> : <><button aria-label={`重命名 ${target.id}`} onClick={() => beginRename(target)}><Pencil /></button><button className="history-card__delete" aria-label={`删除 ${target.id}`} onClick={() => deleteTarget(target.id)}><Trash2 /></button></>}</div></div>
           </article>;
         }) : <div className="empty-state">当前地图还没有目标</div>}</div>
         <p className="legal-note">历史仅保存在此浏览器。Terrain3D 仅显示相对高差，不修正射击密位。</p>

@@ -76,11 +76,17 @@ button { -webkit-tap-highlight-color: transparent; }
 .history-card__title { display: flex; align-items: baseline; gap: 9px; }
 .history-card__title strong { color: var(--amber); font-family: ui-monospace, monospace; font-size: 1.05rem; }
 .history-card__title span { font-weight: 750; }
+.history-card__rename { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 8px; }
+.history-card__rename strong { color: var(--amber); font-family: ui-monospace, monospace; font-size: 1.05rem; }
+.history-card__rename input { width: 100%; min-width: 0; height: 40px; padding: 0 10px; border: 1px solid rgba(242,184,79,.55); border-radius: 6px; outline: none; background: rgba(5,10,12,.72); color: #edf4f1; font-size: .9rem; }
 .history-card__metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 10px 0; }
 .history-card__metrics span { padding: 6px 4px; border-radius: 5px; background: rgba(5,10,12,.55); text-align: center; font: 700 .8rem ui-monospace, monospace; }
 .history-card__footer { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: .72rem; }
-.history-card__delete { width: 38px; height: 38px; border: 0; border-radius: 7px; background: transparent; color: var(--danger); display: grid; place-items: center; cursor: pointer; }
-.history-card__delete svg { width: 17px; }
+.history-card__actions { display: flex; gap: 2px; }
+.history-card__actions button { width: 40px; height: 40px; border: 0; border-radius: 7px; background: transparent; color: #b9cac5; display: grid; place-items: center; cursor: pointer; }
+.history-card__actions button:active { background: rgba(255,255,255,.08); }
+.history-card__actions .history-card__delete { color: var(--danger); }
+.history-card__actions svg { width: 17px; }
 .empty-state { color: var(--muted); text-align: center; padding: 50px 10px; }
 .legal-note { color: #70847e; font-size: .75rem; line-height: 1.45; }
 

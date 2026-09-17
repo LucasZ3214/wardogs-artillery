@@ -40,7 +40,7 @@ export function TacticalMap(props: Props) {
     drawTiles(context, current.map, current.mapStyle, camera, width, height, () => invalidateRef.current());
     drawGrid(context, current.map, camera, width, height);
     const gunScreen = worldToScreen(current.gun, camera, width, height);
-    drawRangeRing(context, gunScreen, MAX_RANGE_METERS[current.weaponId] / 100 * camera.scale, MAX_RANGE_METERS[current.weaponId], current.weaponId);
+    drawRangeRing(context, gunScreen, MAX_RANGE_METERS[current.weaponId] / 100 * camera.scale, MAX_RANGE_METERS[current.weaponId], current.weaponId, current.mapStyle);
 
     const active = current.targets.find((target) => target.id === current.activeTargetId) ?? null;
     if (active) {
@@ -62,8 +62,8 @@ export function TacticalMap(props: Props) {
       if (camera.scale / camera.fitScale < (landmark.minZoom ?? 0)) continue;
       drawLandmark(context, worldToScreen(landmark, camera, width, height), landmark.label, landmark.icon);
     }
-    for (const target of current.targets) drawTarget(context, worldToScreen(target.point, camera, width, height), target.id, target.id === current.activeTargetId, target.impacts.length);
-    drawGun(context, gunScreen);
+    for (const target of current.targets) drawTarget(context, worldToScreen(target.point, camera, width, height), target.id, target.id === current.activeTargetId, target.impacts.length, current.mapStyle);
+    drawGun(context, gunScreen, current.mapStyle);
     context.fillStyle = 'rgba(7,13,15,.78)'; context.fillRect(14, height - 39, 174, 25);
     context.fillStyle = '#c9d5d1'; context.font = '600 12px ui-monospace, monospace';
     const modeName = current.mode === 'gun' ? '炮位' : current.mode === 'target' ? '目标' : '落点';
@@ -179,13 +179,13 @@ function drawGrid(context: CanvasRenderingContext2D, map: MapConfig, camera: Cam
   for (let y = startY; y <= map.bounds.maxY; y += step) { const a = worldToScreen({ x: map.bounds.minX, y }, camera, width, height); const b = worldToScreen({ x: map.bounds.maxX, y }, camera, width, height); context.strokeStyle = Math.abs(y / step) % 5 === 0 ? 'rgba(207,225,218,.25)' : 'rgba(207,225,218,.1)'; context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke(); if (step >= 1) { context.fillStyle = 'rgba(224,235,231,.58)'; context.fillText(y.toFixed(0), Math.max(4, a.x + 3), a.y - 3); } }
   context.restore();
 }
-function drawRangeRing(context: CanvasRenderingContext2D, point: Point, radius: number, meters: number, weaponId: WeaponId) {
-  context.save(); context.strokeStyle = 'rgba(95,215,255,.62)'; context.fillStyle = 'rgba(95,215,255,.035)'; context.lineWidth = 1.5; context.setLineDash([9, 7]);
+function drawRangeRing(context: CanvasRenderingContext2D, point: Point, radius: number, meters: number, weaponId: WeaponId, mapStyle: MapStyle) {
+  context.save(); context.strokeStyle = mapStyle === 'color' ? 'rgba(4,75,96,.9)' : 'rgba(95,215,255,.62)'; context.fillStyle = mapStyle === 'color' ? 'rgba(4,75,96,.055)' : 'rgba(95,215,255,.035)'; context.lineWidth = 1.5; context.setLineDash([9, 7]);
   context.beginPath(); context.arc(point.x, point.y, radius, 0, Math.PI * 2); context.fill(); context.stroke(); context.restore();
   drawLabel(context, { x: point.x, y: point.y - radius - 8 }, `${weaponId === 'mortar' ? 'L81' : 'SPH-2'} MAX ${meters}m`, '#8ce4ff');
 }
-function drawGun(context: CanvasRenderingContext2D, point: Point) { drawReticle(context, point, '#5fd7ff', 13, 8, 1.5, true); drawLabel(context, { x: point.x, y: point.y + 24 }, '炮位', '#8ce4ff'); }
-function drawTarget(context: CanvasRenderingContext2D, point: Point, label: string, active: boolean, impacts: number) { drawReticle(context, point, active ? '#ffcb62' : '#e3ebe8', active ? 14 : 13, 8, active ? 1.75 : 1.25, active); drawLabel(context, { x: point.x, y: point.y - 24 }, impacts ? `${label} · ${impacts}` : label, active ? '#ffcb62' : '#e3ebe8'); }
+function drawGun(context: CanvasRenderingContext2D, point: Point, mapStyle: MapStyle) { drawReticle(context, point, mapStyle === 'color' ? '#075f78' : '#5fd7ff', 13, 8, 1.5, true); drawLabel(context, { x: point.x, y: point.y + 24 }, '炮位', '#8ce4ff'); }
+function drawTarget(context: CanvasRenderingContext2D, point: Point, label: string, active: boolean, impacts: number, mapStyle: MapStyle) { const reticleColor = mapStyle === 'color' ? (active ? '#8a5000' : '#30443e') : (active ? '#ffcb62' : '#e3ebe8'); drawReticle(context, point, reticleColor, active ? 14 : 13, 8, active ? 1.75 : 1.25, active); drawLabel(context, { x: point.x, y: point.y - 24 }, impacts ? `${label} · ${impacts}` : label, active ? '#ffcb62' : '#e3ebe8'); }
 function drawReticle(context: CanvasRenderingContext2D, point: Point, color: string, arm: number, gap: number, lineWidth: number, glow: boolean) { context.save(); context.translate(point.x, point.y); context.strokeStyle = color; context.fillStyle = color; context.lineWidth = lineWidth; if (glow) { context.shadowColor = color; context.shadowBlur = 5; } context.beginPath(); context.moveTo(-arm, 0); context.lineTo(-gap, 0); context.moveTo(gap, 0); context.lineTo(arm, 0); context.moveTo(0, -arm); context.lineTo(0, -gap); context.moveTo(0, gap); context.lineTo(0, arm); context.stroke(); context.beginPath(); context.arc(0, 0, 1.75, 0, Math.PI * 2); context.fill(); context.restore(); }
 function drawLandmark(context: CanvasRenderingContext2D, point: Point, label: string, icon: string) { const tower = icon === 'tower'; context.save(); context.fillStyle = tower ? '#f0b65a' : '#91b8ae'; context.strokeStyle = '#0a1113'; context.lineWidth = 3; context.beginPath(); context.arc(point.x, point.y, tower ? 7 : 5, 0, Math.PI * 2); context.fill(); context.stroke(); context.restore(); if (tower || ['valkyra','manticore','lonestar'].includes(icon)) drawLabel(context, { x: point.x, y: point.y - 14 }, label, tower ? '#f5cb80' : '#bbd5ce'); }
 function drawLabel(context: CanvasRenderingContext2D, point: Point, text: string, color: string) { context.save(); context.font = '700 12px system-ui, sans-serif'; context.textAlign = 'center'; const labelWidth = context.measureText(text).width + 12; context.fillStyle = 'rgba(7,12,14,.8)'; context.fillRect(point.x - labelWidth / 2, point.y - 11, labelWidth, 18); context.fillStyle = color; context.fillText(text, point.x, point.y + 2); context.restore(); }
