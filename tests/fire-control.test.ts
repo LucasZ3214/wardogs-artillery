@@ -37,6 +37,7 @@ describe('portable history', () => {
   it('round-trips desktop schema 1', () => {
     const document = exportDocument(state);
     expect(document.schema).toBe(1);
+    expect(document.settings).toMatchObject({ map_id: 'bakurani', weapon_id: 'mortar', active_target_id: 'T01' });
     expect(importDocument(document, state)).toMatchObject({ mapId: 'bakurani', activeTargetId: 'T01', targets: [target] });
   });
   it('rejects corrupt data', () => { expect(importDocument({ schema: 1, settings: {}, targets: [{ bad: true }] }, state)).toBeNull(); });

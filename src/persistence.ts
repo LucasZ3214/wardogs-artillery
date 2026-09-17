@@ -1,7 +1,7 @@
 import type { FireControlState, Point, Target } from './fire-control';
 
 export const STORAGE_KEY = 'wardogs-static-state-v1';
-export type PortableDocument = { schema: 1; settings: { mapId: string; weaponId: string; arc: string; gun: Point; activeTargetId: string | null }; targets: Target[] };
+export type PortableDocument = { schema: 1; settings: { map_id: string; weapon_id: string; arc: string; gun: Point; active_target_id: string | null }; targets: Target[] };
 
 const finitePoint = (value: unknown): value is Point => {
   if (!value || typeof value !== 'object') return false;
@@ -29,12 +29,21 @@ export function saveState(state: FireControlState) {
 }
 
 export function exportDocument(state: FireControlState): PortableDocument {
-  return { schema: 1, settings: { mapId: state.mapId, weaponId: state.weaponId, arc: state.arc, gun: state.gun, activeTargetId: state.activeTargetId }, targets: state.targets };
+  return { schema: 1, settings: { map_id: state.mapId, weapon_id: state.weaponId, arc: state.arc, gun: state.gun, active_target_id: state.activeTargetId }, targets: state.targets };
 }
 
 export function importDocument(value: unknown, fallback: FireControlState): FireControlState | null {
   if (!value || typeof value !== 'object') return null;
   const document = value as Partial<PortableDocument>;
   if (document.schema !== 1 || !document.settings || !Array.isArray(document.targets)) return null;
-  return validateState({ ...fallback, ...document.settings, targets: document.targets });
+  const settings = document.settings as PortableDocument['settings'] & { mapId?: string; weaponId?: string; activeTargetId?: string | null };
+  return validateState({
+    ...fallback,
+    mapId: settings.map_id ?? settings.mapId ?? fallback.mapId,
+    weaponId: settings.weapon_id ?? settings.weaponId ?? fallback.weaponId,
+    arc: settings.arc ?? fallback.arc,
+    gun: settings.gun ?? fallback.gun,
+    activeTargetId: settings.active_target_id ?? settings.activeTargetId ?? fallback.activeTargetId,
+    targets: document.targets,
+  });
 }
