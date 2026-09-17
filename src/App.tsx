@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Crosshair, Download, History, LocateFixed, Maximize, Menu, RotateCcw, Settings2, Target as TargetIcon, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { Crosshair, Download, History, LocateFixed, Maximize, Menu, RotateCcw, Target as TargetIcon, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { TacticalMap } from './TacticalMap';
 import { MAPS, applyImpact, calculateSolution, correctionRadius, nextTargetId, resetCorrections, type Arc, type FireControlState, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 import { exportDocument, importDocument, loadState, saveState } from './persistence';
@@ -22,7 +22,6 @@ export default function App() {
   const [undoSnapshot, setUndoSnapshot] = useState<FireControlState | null>(null);
   const [mapResetKey, setMapResetKey] = useState(0);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => localStorage.getItem('wardogs-map-style-v1') === 'color' ? 'color' : 'grayscale');
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const gunResetNoticeRef = useRef(false);
   const activeTarget = useMemo(() => state.targets.find((target) => target.id === state.activeTargetId && target.mapId === state.mapId) ?? null, [state.activeTargetId, state.mapId, state.targets]);
@@ -33,13 +32,16 @@ export default function App() {
   useEffect(() => { localStorage.setItem('wardogs-map-style-v1', mapStyle); }, [mapStyle]);
   useEffect(() => {
     let stale = false;
-    if (!activeTarget) { setState((current) => ({ ...current, terrain: { ...emptyTerrain, status: 'unavailable' } })); return; }
-    setState((current) => ({ ...current, terrain: emptyTerrain }));
     const timer = window.setTimeout(() => {
-      sampleTerrainPair(state.mapId, state.gun, activeTarget.point).then((terrain) => { if (!stale) setState((current) => ({ ...current, terrain })); });
-    }, 120);
+      if (!activeTarget) {
+        setState((current) => ({ ...current, terrain: { ...emptyTerrain, status: 'unavailable' } }));
+        return;
+      }
+      setState((current) => ({ ...current, terrain: emptyTerrain }));
+      void sampleTerrainPair(state.mapId, state.gun, activeTarget.point).then((terrain) => { if (!stale) setState((current) => ({ ...current, terrain })); });
+    }, activeTarget ? 120 : 0);
     return () => { stale = true; window.clearTimeout(timer); };
-  }, [activeTarget?.id, activeTarget?.point.x, activeTarget?.point.y, state.gun.x, state.gun.y, state.mapId]);
+  }, [activeTarget, state.gun, state.mapId]);
 
   const snapshot = useCallback(() => setUndoSnapshot(structuredClone(state)), [state]);
   const selectTarget = useCallback((id: string) => {
@@ -92,9 +94,14 @@ export default function App() {
   const clearCorrections = () => {
     if (!activeTarget) return; snapshot(); setState((current) => ({ ...current, targets: current.targets.map((target) => target.id === activeTarget.id ? { ...target, impacts: [], aimPoint: target.point } : target) })); setToast(`${activeTarget.id} 校射已清空`);
   };
-  const deleteTarget = () => {
-    if (!activeTarget) return; snapshot(); const remaining = state.targets.filter((target) => target.id !== activeTarget.id); const next = remaining.filter((target) => target.mapId === state.mapId).sort((a, b) => b.lastUsedAt.localeCompare(a.lastUsedAt))[0];
-    setState((current) => ({ ...current, targets: remaining, activeTargetId: next?.id ?? null })); setToast(`${activeTarget.id} 已删除`); setDeleteConfirm(false);
+  const deleteTarget = (id: string) => {
+    const deleted = state.targets.find((target) => target.id === id); if (!deleted) return; snapshot();
+    setState((current) => {
+      const remaining = current.targets.filter((target) => target.id !== id);
+      const next = remaining.filter((target) => target.mapId === current.mapId).sort((a, b) => b.lastUsedAt.localeCompare(a.lastUsedAt))[0];
+      return { ...current, targets: remaining, activeTargetId: current.activeTargetId === id ? next?.id ?? null : current.activeTargetId };
+    });
+    setToast(`${id} 已删除`);
   };
   const downloadHistory = () => {
     const blob = new Blob([JSON.stringify(exportDocument(state), null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `wardogs-targets-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url);
@@ -108,7 +115,7 @@ export default function App() {
     try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); }
     catch { setToast('Chrome 当前不允许进入全屏'); }
   };
-  const history = [...state.targets].sort((a, b) => b.lastUsedAt.localeCompare(a.lastUsedAt));
+  const history = state.targets.filter((target) => target.mapId === state.mapId).sort((a, b) => b.lastUsedAt.localeCompare(a.lastUsedAt));
   const result = (value: number, digits = 0) => solution.valid ? value.toFixed(digits) : '—';
 
   return <main className="app-shell">
@@ -137,7 +144,7 @@ export default function App() {
       <button className="icon-button" onClick={undo} disabled={!undoSnapshot} aria-label="撤销"><Undo2 /></button>
       <button className="icon-button" onClick={undoImpact} disabled={!activeTarget?.impacts.length} aria-label="撤销最后落点"><RotateCcw /></button>
       <button className="icon-button" onClick={clearCorrections} disabled={!activeTarget?.impacts.length} aria-label="清空当前目标校射"><Crosshair /></button>
-      <button className="icon-button danger" onClick={() => setDeleteConfirm(true)} disabled={!activeTarget} aria-label="删除当前目标"><Trash2 /></button>
+      <button className="icon-button danger" onClick={() => activeTarget && deleteTarget(activeTarget.id)} disabled={!activeTarget} aria-label="删除当前目标"><Trash2 /></button>
       <button className="icon-button" onClick={() => setMapResetKey((value) => value + 1)} aria-label="复位地图"><LocateFixed /></button>
       <button className="icon-button" onClick={toggleFullscreen} aria-label="全屏"><Maximize /></button>
     </nav>
@@ -156,12 +163,19 @@ export default function App() {
       <aside className="history-sheet" onPointerDown={(event) => event.stopPropagation()} aria-label="目标历史">
         <div className="sheet-header"><div><span className="eyebrow">TARGET LOG</span><h2>目标历史</h2></div><button className="icon-button" onClick={() => setHistoryOpen(false)} aria-label="关闭"><X /></button></div>
         <div className="history-tools"><button onClick={downloadHistory}><Download />导出</button><button onClick={() => importInputRef.current?.click()}><Upload />导入</button><input ref={importInputRef} hidden type="file" accept="application/json" onChange={(event) => void importHistory(event.target.files?.[0])} /></div>
-        <div className="history-list">{history.length ? history.map((target) => <button key={target.id} className={`history-item ${target.id === state.activeTargetId ? 'active' : ''}`} onClick={() => { if (target.mapId !== state.mapId) updateMap(target.mapId); selectTarget(target.id); setHistoryOpen(false); }}><strong>{target.id}</strong><span>{target.name}</span><small>{MAPS[target.mapId]?.name ?? target.mapId} · {target.impacts.length} 次校射</small></button>) : <div className="empty-state">地图上还没有目标</div>}</div>
+        <div className="history-list">{history.length ? history.map((target) => {
+          const targetSolution = calculateSolution(state.gun, target.aimPoint, state.weaponId, state.arc);
+          return <article key={target.id} className={`history-card ${target.id === state.activeTargetId ? 'is-active' : ''}`}>
+            <button className="history-card__select" aria-label={`切换到 ${target.id} ${target.name}`} onClick={() => { selectTarget(target.id); setHistoryOpen(false); }}>
+              <div className="history-card__title"><strong>{target.id}</strong><span>{target.name}</span></div>
+              <div className="history-card__metrics"><span>{targetSolution.valid ? `${Math.round(targetSolution.bearing)}°` : '超界'}</span><span>{targetSolution.valid ? `${Math.round(targetSolution.distance)}m` : '—'}</span><span>{targetSolution.valid ? `${Math.round(targetSolution.mil)}mil` : '—'}</span></div>
+            </button>
+            <div className="history-card__footer"><span>{target.impacts.length ? `已校射 ${target.impacts.length} 次` : '未校射'}</span><button className="history-card__delete" aria-label={`删除 ${target.id}`} onClick={() => deleteTarget(target.id)}><Trash2 /></button></div>
+          </article>;
+        }) : <div className="empty-state">当前地图还没有目标</div>}</div>
         <p className="legal-note">历史仅保存在此浏览器。Terrain3D 仅显示相对高差，不修正射击密位。</p>
       </aside>
     </div>}
-
-    {deleteConfirm && <div className="dialog-backdrop"><section className="confirm-dialog" role="alertdialog" aria-modal="true"><Settings2 /><h2>删除 {activeTarget?.id}？</h2><p>该目标的全部落点和校射记录将一并删除。</p><div><button onClick={() => setDeleteConfirm(false)}>取消</button><button className="confirm-delete" onClick={deleteTarget}>删除目标</button></div></section></div>}
   </main>;
 }
 
