@@ -162,7 +162,7 @@ function drawTiles(context: CanvasRenderingContext2D, map: MapConfig, mapStyle: 
   const minX = clamp(Math.floor((Math.min(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1); const maxX = clamp(Math.floor((Math.max(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1);
   const visibleMinY = Math.min(topLeft.y, bottomRight.y); const visibleMaxY = Math.max(topLeft.y, bottomRight.y);
   const minY = clamp(Math.floor((map.tileBounds.maxY - visibleMaxY) / worldPerTile), 0, count - 1); const maxY = clamp(Math.floor((map.tileBounds.maxY - visibleMinY) / worldPerTile), 0, count - 1);
-  context.save(); context.filter = mapStyle === 'grayscale' ? 'brightness(1.45) contrast(1.12)' : 'brightness(1.08) contrast(1.05)';
+  context.save(); context.filter = mapStyle === 'grayscale' ? 'brightness(1.45) contrast(1.12)' : 'none';
   for (let y = minY; y <= maxY; y += 1) for (let x = minX; x <= maxX; x += 1) {
     const url = `${map.tiles[mapStyle]}/zoom_${zoom}/${x}_${y}.webp`; let image = imageCache.get(url);
     if (!image) { image = new Image(); image.decoding = 'async'; image.referrerPolicy = 'no-referrer'; image.onload = invalidate; image.onerror = invalidate; image.src = url; imageCache.set(url, image); }
