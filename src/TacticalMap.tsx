@@ -3,6 +3,7 @@ import { drawContours } from './contours';
 import { CONTROL_ZONE_DIAMETER_METERS, CONTROL_ZONE_RADIUS_UNITS, MAX_RANGE_METERS, type ControlZone, type MapConfig, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
 
 type Props = {
+  contourOffset?: { east: number; north: number };
   contoursEnabled?: boolean;
   map: MapConfig; mapStyle: MapStyle; gun: Point; weaponId: WeaponId; targets: Target[]; activeTargetId: string | null; mode: MapMode; resetKey: number; controlZone: ControlZone | null; czEdgeStart: Point | null;
   onMapClick: (point: Point) => void; onTargetSelect: (id: string) => void;
@@ -40,7 +41,8 @@ export function TacticalMap(props: Props) {
     context.fillStyle = '#0e1719'; context.fillRect(0, 0, width, height);
     const camera = cameraRef.current;
     drawTiles(context, current.map, current.mapStyle, camera, width, height, () => invalidateRef.current());
-    if (current.contoursEnabled) drawContours(context, current.map.id, current.mapStyle === 'color', camera, width, height, () => invalidateRef.current());
+    const contourCamera = { ...camera, center: { x: camera.center.x - (current.contourOffset?.east ?? 0)/100, y: camera.center.y - (current.contourOffset?.north ?? 0)/100 } };
+    if (current.contoursEnabled) drawContours(context, current.map.id, current.mapStyle === 'color', contourCamera, width, height, () => invalidateRef.current());
     drawGrid(context, current.map, camera, width, height);
     if (current.controlZone) drawControlZone(context, current.controlZone, current.mapStyle, camera, width, height);
     if (current.czEdgeStart) drawControlZoneEdgePoint(context, worldToScreen(current.czEdgeStart, camera, width, height), '边点 1');
@@ -76,7 +78,7 @@ export function TacticalMap(props: Props) {
   }, []);
 
   useLayoutEffect(() => { propsRef.current = props; }, [props]);
-  useEffect(() => { draw(); }, [draw, props.contoursEnabled]);
+  useEffect(() => { draw(); }, [draw, props.contoursEnabled, props.contourOffset]);
   useEffect(() => { invalidateRef.current = draw; }, [draw]);
   useEffect(() => {
     const canvas = canvasRef.current; if (!canvas) return;
@@ -170,7 +172,7 @@ function drawTiles(context: CanvasRenderingContext2D, map: MapConfig, mapStyle: 
   const minX = clamp(Math.floor((Math.min(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1); const maxX = clamp(Math.floor((Math.max(topLeft.x, bottomRight.x) - map.tileBounds.minX) / worldPerTile), 0, count - 1);
   const visibleMinY = Math.min(topLeft.y, bottomRight.y); const visibleMaxY = Math.max(topLeft.y, bottomRight.y);
   const minY = clamp(Math.floor((map.tileBounds.maxY - visibleMaxY) / worldPerTile), 0, count - 1); const maxY = clamp(Math.floor((map.tileBounds.maxY - visibleMinY) / worldPerTile), 0, count - 1);
-  context.save(); context.filter = mapStyle === 'grayscale' ? 'brightness(1.45) contrast(1.12)' : 'saturate(0.75)';
+  context.save(); context.filter = mapStyle === 'grayscale' ? 'brightness(1.45) contrast(1.12)' : 'saturate(0.65)';
   for (let y = minY; y <= maxY; y += 1) for (let x = minX; x <= maxX; x += 1) {
     const url = `${map.tiles[mapStyle]}/zoom_${zoom}/${x}_${y}.webp`; let image = imageCache.get(url);
     if (!image) { image = new Image(); image.decoding = 'async'; image.referrerPolicy = 'no-referrer'; image.onload = invalidate; image.onerror = invalidate; image.src = url; imageCache.set(url, image); }

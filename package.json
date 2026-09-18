@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "preview:local": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "terrain:build": "node scripts/build-terrain.mjs --verify"

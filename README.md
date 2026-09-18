@@ -18,7 +18,7 @@ WARDOGS 非官方纯前端火炮计算器，针对 iPad Chrome 触控操作设�
 
 ## 数据来源与声明
 
-支持[可切换等高线](docs/contours.md)：随缩放使用 10 / 5 / 2 米等高距，彩色底图采用深紫灰线条。彩色底图饱和度为 75%，不额外调整亮度和对比度。
+支持[可切换等高线](docs/contours.md)：随缩放使用 10 / 5 / 2 米等高距，彩色底图采用深紫灰线条。彩色底图饱和度为 65%，不额外调整亮度和对比度。
 
 地图与 Terrain3D 数据来源于 [apollyon-sys/wardogs-calculator](https://github.com/apollyon-sys/wardogs-calculator)。地图、游戏素材与 Terrain3D 派生数据不属于本项目代码许可证。
 

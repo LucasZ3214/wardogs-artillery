@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ContourCalibration, useContourOffset } from './ContourCalibration';
 import { Check, Circle, CircleDot, CircleOff, Crosshair, Download, FlipHorizontal2, History, LocateFixed, Maximize, Menu, Pencil, RotateCcw, Target as TargetIcon, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { TacticalMap } from './TacticalMap';
 import { MAPS, applyImpact, calculateSolution, controlZoneCentersFromEdgePoints, nextTargetId, orderControlZoneCentersToward, resetCorrections, type Arc, type ControlZone, type FireControlState, type MapMode, type MapStyle, type Point, type Target, type WeaponId } from './fire-control';
@@ -45,6 +46,7 @@ const INITIAL_STATE: FireControlState = {
 export default function App() {
   const [state, setState] = useState<FireControlState>(() => loadState(INITIAL_STATE));
   const [mode, setMode] = useState<MapMode>('target');
+  const [contourOffset, setContourOffset] = useContourOffset(state.mapId);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(true);
   const [contoursEnabled, setContoursEnabled] = useState(false);
@@ -203,14 +205,19 @@ export default function App() {
       <div className={`terrain-readout terrain-readout--${state.terrain.status}`} title="Terrain3D 相对高差，仅供参考，不参与密位计算"><span>ΔZ</span><strong>{state.terrain.status === 'ready' && state.terrain.deltaZ != null ? `${state.terrain.deltaZ >= 0 ? '+' : ''}${state.terrain.deltaZ.toFixed(1)}` : '—'}</strong><small>m</small></div>
     </header>
 
-    <TacticalMap contoursEnabled={contoursEnabled} map={MAPS[state.mapId]} mapStyle={mapStyle} gun={state.gun} weaponId={state.weaponId} targets={mapTargets} activeTargetId={state.activeTargetId} mode={mode} resetKey={mapResetKey} controlZone={controlZone} czEdgeStart={czEdgeStart} onMapClick={handleMapClick} onTargetSelect={selectTarget} onMarkerMove={handleMarkerMove} onMarkerMoveEnd={handleMarkerMoveEnd} />
+    <TacticalMap contourOffset={contourOffset} contoursEnabled={contoursEnabled} map={MAPS[state.mapId]} mapStyle={mapStyle} gun={state.gun} weaponId={state.weaponId} targets={mapTargets} activeTargetId={state.activeTargetId} mode={mode} resetKey={mapResetKey} controlZone={controlZone} czEdgeStart={czEdgeStart} onMapClick={handleMapClick} onTargetSelect={selectTarget} onMarkerMove={handleMarkerMove} onMarkerMoveEnd={handleMarkerMoveEnd} />
 
-    <section className={`control-pod ${controlsOpen ? '' : 'control-pod--closed'}`} aria-label="地图和武器设置">
-      <button className="icon-button control-toggle" onClick={() => setControlsOpen((value) => !value)} aria-label={controlsOpen ? '收起设置' : '展开设置'}>{controlsOpen ? <X /> : <Menu />}</button>
-      {controlsOpen && <div className="control-pod__body">
+      <section className="control-pod map-layer-pod" aria-label="地图与等高线设置">
+        <div className="control-pod__body">
         <label>地图<select value={state.mapId} onChange={(event) => updateMap(event.target.value)}>{Object.values(MAPS).map((map) => <option key={map.id} value={map.id}>{map.name}</option>)}</select></label>
         <label>图层<select value={mapStyle} onChange={(event) => setMapStyle(event.target.value as MapStyle)}><option value="grayscale">灰度</option><option value="color">彩色</option></select></label>
         <label>等高线<select aria-label="等高线" value={contoursEnabled ? 'on' : 'off'} onChange={event => setContoursEnabled(event.target.value === 'on')}><option value="off">关闭</option><option value="on">开启 · 10 / 5 / 2m</option></select></label>
+        {contoursEnabled && <ContourCalibration value={contourOffset} onChange={setContourOffset} />}
+        </div>
+      </section>
+    <section className={`control-pod ${controlsOpen ? '' : 'control-pod--closed'}`} aria-label="地图和武器设置">
+      <button className="icon-button control-toggle" onClick={() => setControlsOpen((value) => !value)} aria-label={controlsOpen ? '收起设置' : '展开设置'}>{controlsOpen ? <X /> : <Menu />}</button>
+      {controlsOpen && <div className="control-pod__body">
         <label>武器<select value={state.weaponId} onChange={(event) => updateWeapon(event.target.value as WeaponId)}><option value="mortar">L81 MORTAR</option><option value="spg">SPH-2</option></select></label>
         {state.weaponId === 'spg' && <label>弹道<select value={state.arc} onChange={(event) => setState((current) => ({ ...current, arc: event.target.value as Arc }))}><option value="high">高弧</option><option value="low">低弧</option></select></label>}
       </div>}

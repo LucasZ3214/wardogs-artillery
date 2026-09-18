@@ -9,6 +9,16 @@ const pending = new Set<string>();
 const failures = new Map<string, number>();
 const base = `${import.meta.env.BASE_URL}contours/`;
 let active = 0;
+export async function decodeContourResponse(response: Response): Promise<unknown> {
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  // Fetch may already decode Content-Encoding: gzip (notably Vite preview).
+  // File extensions and response headers alone cannot identify the body format.
+  if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+    if (typeof DecompressionStream === 'undefined') throw new Error('Gzip decompression unsupported');
+    return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json();
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
 export function contourInterval(scale: number): number {
   const zoom = Math.round(Math.log2(scale / (256 / 163.84)));
   return zoom >= 6 ? 2 : zoom >= 5 ? 5 : 10;
@@ -19,14 +29,12 @@ function request<T>(url: string, compressed: boolean, done: (data: T) => void, r
   fetch(url).then(async response => {
     if (!response.ok) throw new Error(`Contours ${response.status}`);
     if (!compressed) return response.json();
-    if (!response.body) throw new Error('No contour body');
-    return new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json();
+    return decodeContourResponse(response);
   }).then(done).catch(() => { failures.set(url, Date.now() + 60000); })
     .finally(() => { pending.delete(url); active--; redraw(); });
 }
 
 export function drawContours(ctx: CanvasRenderingContext2D, mapId: string, color: boolean, camera: Camera, width: number, height: number, redraw: () => void) {
-  if (typeof DecompressionStream === 'undefined') return;
   const manifest = manifests.get(mapId);
   if (!manifest) {
     request<Manifest>(`${base}${mapId}/manifest.json`, false, data => manifests.set(mapId, data), redraw);

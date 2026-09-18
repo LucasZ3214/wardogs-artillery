@@ -40,7 +40,17 @@ button { -webkit-tap-highlight-color: transparent; }
 @keyframes pulse { 50% { opacity: .35; } }
 
 .control-pod { position: absolute; z-index: 16; top: calc(92px + env(safe-area-inset-top)); left: 12px; display: flex; align-items: flex-start; gap: 7px; }
+.contour-calibration { max-width: 210px; color: #c9d8d3; font-size: 12px; }
+.contour-calibration summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.contour-calibration small, .contour-calibration label { display: block; margin: 5px 0; }
+.contour-calibration input { display: block; width: 100%; min-height: 44px; background: #132226; color: #edf4f1; border: 1px solid #54716b; border-radius: 6px; padding: 8px; box-sizing: border-box; }
+.contour-calibration button { min-height: 44px; padding: 6px 12px; background: #20373c; color: #edf4f1; border: 1px solid #54716b; border-radius: 6px; }
+.contour-nudges { display: flex; gap: 6px; margin: 4px 0; }
 .control-toggle { flex: 0 0 auto; }
+/* Keep map layers above the bottom editing toolbar on narrow/touch screens. */
+.control-pod.map-layer-pod { top: auto; bottom: calc(92px + env(safe-area-inset-bottom)); left: max(8px, env(safe-area-inset-left)); }
+.map-layer-pod .control-pod__body { display: grid; grid-template-columns: 1fr; max-width: 220px; max-height: calc(100dvh - 210px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; }
+.map-layer-pod select { min-width: 0; width: 100%; }
 .control-pod__body { display: flex; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); box-shadow: 0 12px 30px rgba(0,0,0,.28); backdrop-filter: blur(14px); }
 .control-pod label { color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
 .control-pod select { display: block; min-width: 150px; min-height: 44px; margin-top: 4px; padding: 0 38px 0 12px; border: 1px solid rgba(166, 200, 190, .25); border-radius: 8px; background: #132226; font-weight: 750; outline: none; text-transform: uppercase; }
