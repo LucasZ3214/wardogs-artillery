@@ -75,7 +75,7 @@ export function drawContours(ctx: CanvasRenderingContext2D, mapId: string, color
       ctx.lineWidth = width+.65; ctx.strokeStyle = major ? 'rgba(244,237,220,.69)' : 'rgba(244,237,220,.49)'; ctx.stroke(path);
     }
     ctx.lineWidth = width;
-    ctx.strokeStyle = color ? (major ? 'rgba(68,42,83,.96)' : 'rgba(68,42,83,.76)') : (major ? 'rgba(255,211,130,.94)' : 'rgba(255,211,130,.59)');
+    ctx.strokeStyle = color ? (major ? 'rgba(42,24,53,1)' : 'rgba(42,24,53,.88)') : (major ? 'rgba(255,211,130,.94)' : 'rgba(255,211,130,.59)');
     ctx.stroke(path);
   });
   ctx.restore();
